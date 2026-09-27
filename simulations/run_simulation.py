@@ -9,12 +9,17 @@ Command-line interface for running simulations
 
 import argparse
 import sys
+import os
 from pathlib import Path
 from colorama import Fore, Style, init
 
 from simulator import PredictionSimulator
 
 init(autoreset=True)
+
+if os.name == "nt":
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
 
 
 def main():
@@ -165,4 +170,3 @@ Examples:
 
 if __name__ == "__main__":
     main()
-

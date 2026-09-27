@@ -16,6 +16,7 @@ from colorama import Fore, Style, init
 import yaml
 import json
 import logging
+import os
 from pathlib import Path
 
 from data_generator import WineDataGenerator
@@ -39,7 +40,23 @@ class PredictionSimulator:
         with open(config_path, 'r') as f:
             self.config = yaml.safe_load(f)
         
-        self.api_config = self.config['api']
+        self.api_config = self.config['api'].copy()
+        self.api_config['prediction_url'] = os.getenv(
+            'SIMULATOR_PREDICTION_URL',
+            self.api_config['prediction_url']
+        )
+        self.api_config['health_url'] = os.getenv(
+            'SIMULATOR_HEALTH_URL',
+            self.api_config['health_url']
+        )
+        self.api_config['evidently_capture_url'] = os.getenv(
+            'SIMULATOR_EVIDENTLY_CAPTURE_URL',
+            self.api_config['evidently_capture_url']
+        )
+        self.api_config['evidently_analyze_url'] = os.getenv(
+            'SIMULATOR_EVIDENTLY_ANALYZE_URL',
+            self.api_config['evidently_analyze_url']
+        )
         self.data_generator = WineDataGenerator(config_path)
         
         # Statistics
@@ -369,4 +386,3 @@ if __name__ == "__main__":
     
     # Trigger drift analysis
     simulator.trigger_drift_analysis(window_size=50)
-

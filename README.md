@@ -159,12 +159,13 @@ nano .env
 - User: `dongnd` (used for container naming)
 - All passwords: use default for development
 
-###  Start Infrastructure Services
+### Start Infrastructure Services
 
-Start all core infrastructure services (PostgreSQL, MinIO, MLFlow, Prometheus, Grafana):
+Start all core infrastructure services (PostgreSQL, MinIO, MinIO initialization,
+MLflow, Prometheus, and Grafana):
 
 ```bash
-docker-compose up -d postgres minio minio-init mlflow prometheus grafana
+docker compose up -d postgres minio minio-init mlflow prometheus grafana evidently
 ```
 
 **Wait for services to be healthy**:
@@ -176,7 +177,7 @@ docker-compose ps
 # All services should show "healthy" or "Up"
 ```
 
-### ️Train and Register Model
+### Train and Register Model
 
 **⚠️ IMPORTANT**: The API requires a trained model in MLFlow Registry before it can start!
 
@@ -187,6 +188,16 @@ pip install -r scripts/requirements.txt
 # Train and register model
 python scripts/training.py
 ```
+
+The model is stored in the local MLflow/MinIO volumes, not in Git. Every fresh
+clone must run this training step once before starting the API:
+
+```bash
+docker compose up -d api
+```
+
+On Windows PowerShell, use `Copy-Item .env.example .env`; on Linux/macOS use
+`cp .env.example .env`.
 
 **Expected Output:**
 ```
@@ -314,6 +325,42 @@ These scripts will:
 - Generate Prometheus metrics for API and model
 - Optionally send data to Evidently and trigger drift analysis
 - Make it easy to visualize everything in Grafana
+
+### Docker End-to-End Demo with Telegram
+
+The simulator is also available as an on-demand Docker Compose service. It uses
+the internal Docker service names, so it can exercise the complete API ->
+Evidently -> Prometheus -> Alertmanager path without installing simulator
+dependencies on the host.
+
+After configuring Telegram credentials and generating the local Alertmanager
+files, start the stack with the Telegram profile:
+
+```powershell
+.\scripts\configure_alertmanager.ps1
+docker compose --profile telegram up -d
+```
+
+Run baseline traffic, then drift traffic:
+
+```powershell
+docker compose --profile demo run --rm simulator `
+  -n 100 -r 20 -s normal --analyze -q
+
+docker compose --profile demo run --rm simulator `
+  -n 100 -r 20 -s severe_drift --analyze -q
+```
+
+The `DataDriftDetected` Prometheus rule remains pending for five minutes
+before Alertmanager sends the Telegram notification. Check the states with:
+
+```powershell
+Invoke-RestMethod http://localhost:9090/api/v1/alerts
+Invoke-RestMethod http://localhost:9093/api/v2/alerts
+```
+
+The simulator image is built from `simulations/Dockerfile` and is not started
+by the default Compose profile.
 
 ### Access Dashboards & UIs
 

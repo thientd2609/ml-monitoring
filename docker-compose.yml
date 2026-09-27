@@ -153,6 +153,7 @@ services:
       - '--web.console.templates=/usr/share/prometheus/consoles'
     volumes:
       - ./config/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./config/prometheus/evidently_alerts.yml:/etc/prometheus/evidently_alerts.yml:ro
       - prometheus_data:/prometheus
     ports:
       - "9090:9090"
@@ -213,6 +214,29 @@ services:
     networks:
       - monitoring
     restart: unless-stopped
+
+  # ==========================================
+  # SIMULATION DEMO (ON DEMAND)
+  # ==========================================
+  simulator:
+    profiles: ["demo"]
+    build:
+      context: ./simulations
+      dockerfile: Dockerfile
+    container_name: ${USER}_monitoring-simulator
+    environment:
+      - SIMULATOR_PREDICTION_URL=http://api:8000/predict
+      - SIMULATOR_HEALTH_URL=http://api:8000/health
+      - SIMULATOR_EVIDENTLY_CAPTURE_URL=http://evidently:8001/capture
+      - SIMULATOR_EVIDENTLY_ANALYZE_URL=http://evidently:8001/analyze
+    depends_on:
+      api:
+        condition: service_healthy
+      evidently:
+        condition: service_healthy
+    networks:
+      - monitoring
+    restart: "no"
 
   # ==========================================
   # AIRFLOW (OPTIONAL)
