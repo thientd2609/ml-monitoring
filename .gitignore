@@ -1,0 +1,8 @@
+.venv/
+venv
+__pycache__/
+.env
+mlflow_data
+.DS_Store
+config/alertmanager/alertmanager.local.yml
+config/alertmanager/telegram_bot_token
